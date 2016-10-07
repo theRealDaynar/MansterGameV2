@@ -28,6 +28,8 @@
             <string>ready = false
 partner = noone
 team = ds_list_create()
+hold_buffer = noone
+
 
 </string>
           </argument>

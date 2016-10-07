@@ -87,6 +87,42 @@ var data_buff = async_load[? "buffer"]
             }  
         }          
     break;
+    case msg_net.battle_turn:
+        random_set_seed(buffer_read(data_buff,buffer_u8))
+        repeat(2)
+        {
+            if buffer_read(data_buff,buffer_u16) = sid
+            {
+                var t = oBattleController.team1
+            }
+            else
+            {
+                var t = oBattleController.team2
+            }
+            for(var i = 0; i &lt; 4; ++i)
+            {
+                var selected_ability = buffer_read(data_buff,buffer_u16)
+                var ability_map = script_execute(ability,2)
+                repeat(ability_map[? "n"])
+                {
+                    var target_num = buffer_read(data_buff,buffer_u8)
+                    if target_num &lt; 4
+                    {
+                        ds_list_add(t[|i].targets,t[|target_num])
+                    }
+                    else
+                    {
+                        if t = oBattleController.team1
+                            var tt = oBattleController.team2
+                        else
+                            var tt = oBattleController.team1
+                        ds_list_add(t[|i].targets,t[|target_num-4])
+                    }
+                }
+            } 
+        }
+        with(oBattleController) event_user(0)
+    break;
     }
 break;
 }

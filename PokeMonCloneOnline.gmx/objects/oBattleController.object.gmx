@@ -223,8 +223,29 @@ event_user(1)
                 ds_list_add(eteam[|i].targets,user_team[|irandom(3)])
                 eteam[|i].selected_ability = slap
             }
-            
-            event_user(0)
+            if instance_exists(oClient)
+            {
+                var out_buff = buffer_create(1,buffer_grow,1)
+                buffer_write(out_buff,buffer_u8,msg_net.battle_turn)
+                for(var i = 0; i &lt; 4 ++i)
+                {
+                    var cur_man = user_team[|i];
+                    var ability = cur_man.selected_ability;
+                    buffer_write(out_buff,buffer_u16,ability)
+                    var a_map = script_execute(ability,2)
+                    for(var ii = 0; ii &lt; a_map[? 'n']; ++ii)
+                    {
+                        var target = cur_man.targets[|ii]
+                        var t_team = target.team
+                        buffer_write(out_buff,buffer_u8,ds_list_find_index(t_team,target) * (t_team = user_team))
+                    }
+                    network_send_packet(oClient.client,out_buff,buffer_tell(out_buff))
+                    buffer_delete(out_buff)
+                    ds_map_destroy(a_map)
+                }
+            }
+            else
+                event_user(0)
         }
     }
     //draw ability options
