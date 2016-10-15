@@ -5,7 +5,7 @@
   <visible>-1</visible>
   <depth>0</depth>
   <persistent>0</persistent>
-  <parentName>&lt;undefined&gt;</parentName>
+  <parentName>oNetworkTest</parentName>
   <maskName>&lt;undefined&gt;</maskName>
   <events>
     <event eventtype="0" enumb="0">
@@ -25,7 +25,11 @@
         <arguments>
           <argument>
             <kind>1</kind>
-            <string>server = network_create_server(network_socket_tcp,7766,20)
+            <string>event_inherited()
+ds_list_add(log,"Creating Server")
+network_set_config(network_config_use_non_blocking_socket,true)
+network_set_config(network_config_connect_timeout,10000)
+server = network_create_server(network_socket_tcp,7766,20)
 enum msg_net
 {
     first_connection = 0,
@@ -63,31 +67,42 @@ clients = ds_map_create()
 switch(async_load[? "type"])
 {
 case network_type_connect: case network_type_non_blocking_connect:
-if !async_load[? "succeeded"] exit
+//if !async_load[? "succeeded"] exit
     var c = instance_create(0,0,oServerClient);
     c.socket = async_load[? "socket"]
-    clients[? socket] = c
-    var b_size = buffer_sizeof(buffer_u8) + buffer_sizeof(buffer_u16)
+    clients[? c.socket] = c
+    var b_size = buffer_sizeof(buffer_u8) + buffer_sizeof(buffer_u32)
     var out_buff = buffer_create(b_size,buffer_fixed,1)
     buffer_write(out_buff,buffer_u8,msg_net.first_connection)
-    buffer_write(out_buff,buffer_u16,c)
-    network_send_packet(c.socket,out_buff,b_size)
+    buffer_write(out_buff,buffer_u32,c)
+    //network_send_packet(c.socket,out_buff,b_size)
     buffer_delete(out_buff)
+    ds_list_add(log,string(c) + " connected")
 break;
 case network_type_disconnect:
     var dc_socket = async_load[? "socket"]
+    var c = clients[? dc_socket]
     with(clients[? dc_socket])
             instance_destroy()
     ds_map_delete(clients,dc_socket)
+    ds_list_add(log,string(c) + " disconnected")
 break;
 case network_type_data:
+ds_list_add(log,"Recieving data")
     var data_socket = async_load[? "id"]
     var data_buff = async_load[? "buffer"]
-        
+    var c = clients[? data_socket];
     switch(buffer_read(data_buff,buffer_u8))
     {
+    case msg_net.first_connection:
+        var out_buff = buffer_create(buffer_sizeof(buffer_u8) + buffer_sizeof(buffer_u32),buffer_fixed,1)
+        buffer_write(out_buff,buffer_u8,msg_net.first_connection)
+        buffer_write(out_buff,buffer_u32,c)
+        network_send_packet(c.socket,out_buff,buffer_sizeof(buffer_u8)+buffer_sizeof(buffer_u32))
+        buffer_delete(out_buff)
+        show_debug_message(string(c) + " first connection info")
+    break;
     case msg_net.battle_find:
-        var c = clients[? data_socket];
         ds_list_clear(c.team)
         repeat(4)
             ds_list_add(c.team,buffer_read(data_buff,buffer_u8))
@@ -97,34 +112,34 @@ case network_type_data:
         {   
             c.partner = battle_queue
             battle_queue.partner = c
-            var b_size = buffer_sizeof(buffer_u8) * 9 + buffer_sizeof(buffer_u16) * 2
+            var b_size = buffer_sizeof(buffer_u8) * 9 + buffer_sizeof(buffer_u32) * 2
             var out_buff = buffer_create(b_size,buffer_fixed,1)
             buffer_write(out_buff,buffer_u8,msg_net.battle_find)
-            buffer_write(out_buff,buffer_u16,c)
+            buffer_write(out_buff,buffer_u32,c)
             for(var i = 0; i &lt; 4; ++i)
-                buffer_write(out_buff,buffer_u8,c.team[i])
-            buffer_write(out_buff,buffer_u16,battle_queue)
+                buffer_write(out_buff,buffer_u8,c.team[|i])
+            buffer_write(out_buff,buffer_u32,battle_queue)
             for(var i = 0; i &lt; 4; ++i)
-                buffer_write(out_buff,buffer_u8,battle_queue.team[i])
+                buffer_write(out_buff,buffer_u8,battle_queue.team[|i])
             network_send_packet(c.socket,out_buff,b_size)
             network_send_packet(battle_queue.socket,out_buff,b_size)
             battle_queue = noone
             buffer_delete(out_buff)
         }
+        show_debug_message(string(c)+" looking for battle")
     break;
     case msg_net.battle_turn:
-        var c = clients[? data_socket];
         if instance_exists(c.partner) and c.partner.ready
         {
-            var b_size = buffer_get_size(c.partner.hold_buffer) + buffer_sizeof(buffer_u16)*2+buffer_get_size(data_buff)+buffer_sizeof(buffer_u8)
+            var b_size = buffer_get_size(c.partner.hold_buffer) + buffer_sizeof(buffer_u32)*2+buffer_get_size(data_buff)+buffer_sizeof(buffer_u8)
             var out_buff = buffer_create(b_size,buffer_fixed,1)
             buffer_write(out_buff,buffer_u8,msg_net.battle_turn)
             buffer_write(out_buff,buffer_u8,irandom(255))
-            buffer_write(out_buff,buffer_u16,c)
-            buffer_copy(data_buff,buffer_sizeof(buffer_u8),buffer_get_size(data_buff)-buffer_sizeof(buffer_u8),out_buff,buffer_sizeof(buffer_u16)+buffer_sizeof(buffer_u8)*2)
-            buffer_seek(out_buff,buffer_seek_start,buffer_sizeof(buffer_u16)+buffer_get_size(data_buff)+buffer_sizeof(buffer_u8))
-            buffer_write(out_buff,buffer_u16,c.partner)
-            buffer_copy(c.partner.hold_buffer,0,buffer_get_size(c.partner.hold_buffer),out_buff,buffer_sizeof(buffer_u16)*2+buffer_get_size(data_buff)+buffer_sizeof(buffer_u8))
+            buffer_write(out_buff,buffer_u32,c)
+            buffer_copy(data_buff,buffer_sizeof(buffer_u8),buffer_get_size(data_buff)-buffer_sizeof(buffer_u8),out_buff,buffer_sizeof(buffer_u32)+buffer_sizeof(buffer_u8)*2)
+            buffer_seek(out_buff,buffer_seek_start,buffer_sizeof(buffer_u32)+buffer_get_size(data_buff)+buffer_sizeof(buffer_u8))
+            buffer_write(out_buff,buffer_u32,c.partner)
+            buffer_copy(c.partner.hold_buffer,0,buffer_get_size(c.partner.hold_buffer),out_buff,buffer_sizeof(buffer_u32)*2+buffer_get_size(data_buff)+buffer_sizeof(buffer_u8))
             network_send_packet(c.socket,out_buff,b_size)
             network_send_packet(c.partner.socket,out_buff,b_size)
             buffer_delete(out_buff)
@@ -138,6 +153,7 @@ case network_type_data:
             var buff_size = buffer_get_size(data_buff) - buffer_sizeof(buffer_u8);
             c.hold_buffer = buffer_create(buff_size,buffer_fixed,1)
             buffer_copy(data_buff,buffer_sizeof(buffer_u8),buff_size,c.hold_buffer,0)
+            c.ready = true
         }
     break;
     }

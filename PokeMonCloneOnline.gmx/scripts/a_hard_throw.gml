@@ -32,6 +32,7 @@ else
 
     var tags = ds_list_create()
     ds_list_add(tags,"normal","str","projectile")
+    show_debug_message(string(str) + " " + string(a_power) + " " + string(lvl_mod))
     deal_damage(targets[|0],str * a_power * lvl_mod,tags)
 }
 

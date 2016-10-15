@@ -5,7 +5,7 @@
   <visible>-1</visible>
   <depth>0</depth>
   <persistent>0</persistent>
-  <parentName>&lt;undefined&gt;</parentName>
+  <parentName>oNetworkTest</parentName>
   <maskName>&lt;undefined&gt;</maskName>
   <events>
     <event eventtype="0" enumb="0">
@@ -25,7 +25,10 @@
         <arguments>
           <argument>
             <kind>1</kind>
-            <string>network_set_config(network_config_use_non_blocking_socket,true)
+            <string>event_inherited()
+ds_list_add(log,"Creating Client")
+network_set_config(network_config_use_non_blocking_socket,true)
+network_set_config(network_config_connect_timeout,10000)
 client = network_create_socket(network_socket_tcp)
 network_connect(client,"127.0.0.1",7766)
 sid = noone
@@ -55,27 +58,43 @@ sid = noone
             <string>switch(async_load[? "type"])
 {
 case network_type_connect: case network_type_non_blocking_connect:
-show_debug_message("connected")
+ds_list_add(log,"Connected")
+var out_buff = buffer_create(buffer_sizeof(buffer_u8)*5,buffer_fixed,1)
+buffer_write(out_buff,buffer_u8,msg_net.first_connection)
+network_send_packet(async_load[? "id"],out_buff,buffer_sizeof(buffer_u8)*5)
+buffer_delete(out_buff)
 break;
 case network_type_data:
+ds_list_add(log,"Recieving data")
 var data_buff = async_load[? "buffer"]
     switch(buffer_read(data_buff,buffer_u8))
     {
     case msg_net.first_connection:
-        sid = buffer_read(data_buff,buffer_u16)
+        sid = buffer_read(data_buff,buffer_u32)
+        //temp queue up
+        var out_buff = buffer_create(buffer_sizeof(buffer_u8)*5,buffer_fixed,1)
+        buffer_write(out_buff,buffer_u8,msg_net.battle_find)
+        repeat(4)
+        buffer_write(out_buff,buffer_u8,1)
+        network_send_packet(client,out_buff,buffer_sizeof(buffer_u8)*5)
+        buffer_delete(out_buff)
+        show_debug_message("sid recieved")
     break;
     case msg_net.battle_find:
-        repeat(2)
+        instance_create(0,0,oBattleController)
+        for(var ii = 0; ii &lt; 2; ++ii)
         {
-            if buffer_read(data_buff,buffer_u16) = sid
+            if buffer_read(data_buff,buffer_u32) = sid
             {
                 var t = oBattleController.team1
-                var xx = 110 + (i mod 2) * 50
+                var xx = 110 + (ii mod 2) * 50
             }
             else
             {
                 var t = oBattleController.team2
-                var xx = room_width - 110 - (i mod 2) * 50
+                var xx = room_width - 110 - (ii mod 2) * 50
+                if ii = 0
+                    oBattleController.first_team = oBattleController.team2 
             }
             var y_section = room_height / 4
             for(var i = 0; i &lt; 4; ++i)
@@ -91,7 +110,7 @@ var data_buff = async_load[? "buffer"]
         random_set_seed(buffer_read(data_buff,buffer_u8))
         repeat(2)
         {
-            if buffer_read(data_buff,buffer_u16) = sid
+            if buffer_read(data_buff,buffer_u32) = sid
             {
                 var t = oBattleController.team1
             }
@@ -102,7 +121,10 @@ var data_buff = async_load[? "buffer"]
             for(var i = 0; i &lt; 4; ++i)
             {
                 var selected_ability = buffer_read(data_buff,buffer_u16)
-                var ability_map = script_execute(ability,2)
+                var ability_map = script_execute(selected_ability,2);
+                t[|i].selected_ability = selected_ability
+                //show_debug_message(script_execute(selected_ability,1))
+                ds_list_clear(t[|i].targets)
                 repeat(ability_map[? "n"])
                 {
                     var target_num = buffer_read(data_buff,buffer_u8)
@@ -116,7 +138,7 @@ var data_buff = async_load[? "buffer"]
                             var tt = oBattleController.team2
                         else
                             var tt = oBattleController.team1
-                        ds_list_add(t[|i].targets,t[|target_num-4])
+                        ds_list_add(t[|i].targets,tt[|target_num-4])
                     }
                 }
             } 

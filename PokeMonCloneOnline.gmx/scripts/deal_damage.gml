@@ -27,6 +27,7 @@ with(argument0)
         if pos >= 0
             ds_list_delete(oBattleController.execution_list,pos)
     }
+    show_debug_message(hp)
 }
 ds_list_destroy(tags)
 

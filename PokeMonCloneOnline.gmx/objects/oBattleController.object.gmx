@@ -42,6 +42,7 @@ for(var i = 0; i &lt; 4; ++i)
     ds_list_add(team2,man)
 }
 user_team = team1
+first_team = user_team
 
 planning_phase = true
 planning_manster = noone
@@ -88,8 +89,7 @@ if ds_list_empty(execution_list)
     exit
 }
 //have the first manster run it's code
-with(execution_list[|0])
-    event_user(0)
+with(execution_list[|0]) event_user(0)
 //remove it from the list
 ds_list_delete(execution_list,0)
 
@@ -117,12 +117,23 @@ ds_list_delete(execution_list,0)
             <kind>1</kind>
             <string>///Combat Settup
 planning_phase = false
-with(oBattleManster)
+
+var current_team = first_team
+if first_team = team1
+    var second_team = team2
+else
+    var second_team = team1
+for(var iii = 0; iii &lt; 2; ++iii)
+{
+if iii = 1
+    current_team = second_team
+for(var ii = 0; ii &lt; 4; ++ii)
+with(current_team[|ii])
 {
     if !dead
     {
         //show_debug_message(selected_ability)
-    
+        
         var priority = script_execute(selected_ability,3)
         var s = ds_list_size(other.execution_list)
         var i
@@ -153,6 +164,7 @@ with(oBattleManster)
         }
         if i = s ds_list_add(other.execution_list,id)
     }
+}
 }
 event_user(1)
 
@@ -212,20 +224,9 @@ event_user(1)
         //player is ready
         if lmb and point_in_rectangle(mouse_x,mouse_y,midx - sw,midy - sh,midx + sw,midy + sh)
         {
-            //if not online do ai here and then begin combat phase
-            var eteam
-            if user_team = team1
-                eteam = team2
-            else
-                eteam = team1
-            for(var i = 0; i &lt; ds_list_size(eteam); ++i)
-            {
-                ds_list_add(eteam[|i].targets,user_team[|irandom(3)])
-                eteam[|i].selected_ability = slap
-            }
             if instance_exists(oClient)
             {
-                var out_buff = buffer_create(1,buffer_grow,1)
+                var out_buff = buffer_create((buffer_sizeof(buffer_u8)+buffer_sizeof(buffer_u16)) * 4,buffer_grow,1)
                 buffer_write(out_buff,buffer_u8,msg_net.battle_turn)
                 for(var i = 0; i &lt; 4 ++i)
                 {
@@ -237,15 +238,28 @@ event_user(1)
                     {
                         var target = cur_man.targets[|ii]
                         var t_team = target.team
-                        buffer_write(out_buff,buffer_u8,ds_list_find_index(t_team,target) * (t_team = user_team))
+                        buffer_write(out_buff,buffer_u8,ds_list_find_index(t_team,target) + 4 * (t_team != user_team))
                     }
-                    network_send_packet(oClient.client,out_buff,buffer_tell(out_buff))
-                    buffer_delete(out_buff)
                     ds_map_destroy(a_map)
                 }
+                network_send_packet(oClient.client,out_buff,buffer_tell(out_buff))
+                buffer_delete(out_buff)
             }
             else
+            {
+                //if not online do ai here and then begin combat phase
+                var eteam
+                if user_team = team1
+                    eteam = team2
+                else
+                    eteam = team1
+                for(var i = 0; i &lt; ds_list_size(eteam); ++i)
+                {
+                    ds_list_add(eteam[|i].targets,user_team[|irandom(3)])
+                    eteam[|i].selected_ability = slap
+                }
                 event_user(0)
+            }
         }
     }
     //draw ability options
@@ -292,7 +306,6 @@ event_user(1)
         draw_rectangle(bbox_left,bbox_top,bbox_right,bbox_bottom,1)
         }
         ds_map_destroy(targeting_info)
-
     }
 }
 

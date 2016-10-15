@@ -239,7 +239,7 @@ if true
     draw_text(tnx , ty, string_format(hp,3,0) + "/" + string(max_hp))
     ty += vpad
     draw_text(tx, ty,"Stamina: ")
-    draw_text(tnx , ty, string_format(hp,3,0) + "/" + string(max_hp))
+    draw_text(tnx , ty, string_format(stam,3,0) + "/" + string(max_stam))
 }
 
 </string>

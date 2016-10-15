@@ -25,13 +25,13 @@
         <arguments>
           <argument>
             <kind>1</kind>
-            <string>if other.id  = target and instance_number(oBattleProjectile) = 1
+            <string>if other.id = target
 {
-    with(owner)
-        event_user(1)
+    if instance_number(oBattleProjectile) = 1
+        with(owner)
+            event_user(1)
     instance_destroy()
 }
-
 </string>
           </argument>
         </arguments>

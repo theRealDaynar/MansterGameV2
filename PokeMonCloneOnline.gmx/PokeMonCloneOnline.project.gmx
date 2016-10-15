@@ -58,14 +58,15 @@
       <object>objects\oBattleProjectile</object>
       <object>objects\oBattleManster</object>
     </objects>
-    <object>objects\oClient</object>
     <object>objects\oServerClient</object>
     <object>objects\oServer</object>
+    <object>objects\oNetworkTest</object>
+    <object>objects\oClient</object>
   </objects>
   <rooms name="rooms">
+    <room>rooms\rNetworkTest</room>
     <room>rooms\rIsland</room>
     <room>rooms\rBattle</room>
-    <room>rooms\rServer</room>
   </rooms>
   <constants number="1">
     <constant name="lvl_mod">(9 - 8 * (50-lvl)/50)</constant>
